@@ -6,14 +6,14 @@
   "categories": [],
   "authors": [
     {
-      "name": "Name Surname",
-      "email": "author@yourmail.org"
+      "name": "Genius Dynamics",
+      "email": "support@genius.ke"
     }
   ],
   "docs": {
     "documentation_url": "https://docs.rocketchat.com/",
-    "bug_url": "https://github.com/NethServer/dev",
-    "code_url": "https://github.com/author/ns8-rocketchat"
+    "bug_url": "https://github.com/geniusdynamics/ns8-rocketchat/issues",
+    "code_url": "https://github.com/geniusdynamics/ns8-rocketchat"
   },
-  "source": "ghcr.io/nethserver/rocketchat"
+  "source": "ghcr.io/geniusdynamics/rocketchat"
 }
