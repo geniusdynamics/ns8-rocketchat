@@ -86,27 +86,6 @@ The suite installs the module, configures a host name, checks that the web appli
 
 Run it locally with the NS8 standard infrastructure described in the [ns8-github-actions README](https://github.com/NethServer/ns8-github-actions/blob/v1/README.md#running-tests-locally).
 
-## Open items
-
-Found by the NS8 module standards check. These must be resolved before a stable release:
-
-- tests/rocketchat.robot generated from template: set real configure payload and URL check
-- metadata: documentation_url is a placeholder
-- metadata: categories empty (use standard categories)
-- metadata: description.en needs >= 60 real chars (+ it translation)
-- mariadb-app.service: uses %S/state, kickstart uses %E/state
-- kickstart-app.service: uses %S/state, kickstart uses %E/state
-- kickstart.service: uses %S/state, kickstart uses %E/state
-- discover-smarthost still present: remove if the app does not use SMTP
-- README still has the template boilerplate
-- mariadb-app.service: %S/state changed to %E/state (review the bind mounts that remain)
-- kickstart-app.service: %S/state changed to %E/state (review the bind mounts that remain)
-- kickstart.service: %S/state changed to %E/state (review the bind mounts that remain)
-- imageroot/actions/restore-module/80start_services: smarthost lines removed, check the unit still starts
-- imageroot/actions/configure-module/80start_services: smarthost lines removed, check the unit still starts
-- imageroot/systemd/user/kickstart-app.service: smarthost lines removed, check the unit still starts
-- NGINX_IMAGE is used by the module but no image in the label provides it: leftover from the template?
-
 ## Upstream
 
 Application documentation: https://docs.rocketchat.com/
