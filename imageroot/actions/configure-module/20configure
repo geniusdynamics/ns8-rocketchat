@@ -1,0 +1,43 @@
+#!/usr/bin/env python3
+
+#
+# Copyright (C) 2026 Genius Dynamics
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+import json
+import os
+import sys
+import agent
+import agent.tasks
+
+request = json.load(sys.stdin)
+
+host = request["host"]
+http2https = request.get("http2https", True)
+lets_encrypt = request.get("lets_encrypt", False)
+
+agent.set_env("TRAEFIK_HOST", host)
+agent.set_env("TRAEFIK_HTTP2HTTPS", http2https)
+agent.set_env("TRAEFIK_LETS_ENCRYPT", lets_encrypt)
+# the single TCP port reserved by the org.nethserver.tcp-ports-demand label
+agent.set_env("TCP_PORT", os.environ["TCP_PORTS"].split(",")[0])
+# The image name rocket.chat contains a dot, so the variable the platform
+# derives from it may not be usable by systemd. Publish it under a fixed name.
+for key, value in os.environ.items():
+    if key.endswith("_IMAGE") and "rocket.chat" in value:
+        agent.set_env("ROCKETCHAT_IMAGE", value)
+agent.dump_env()
+
+response = agent.tasks.run(
+    agent_id=agent.resolve_agent_id("traefik@node"),
+    action="set-route",
+    data={
+        "instance": os.environ["MODULE_ID"],
+        "url": "http://127.0.0.1:" + os.environ["TCP_PORT"],
+        "host": host,
+        "http2https": http2https,
+        "lets_encrypt": lets_encrypt,
+    },
+)
+agent.assert_exp(response["exit_code"] == 0, "The traefik set-route task failed!")
