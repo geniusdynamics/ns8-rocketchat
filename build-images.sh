@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #
-# Copyright (C) 2023 Nethesis S.r.l.
+# Copyright (C) 2026 Genius Dynamics
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 
@@ -11,7 +11,7 @@ set -e
 # Prepare variables for later use
 images=()
 # The image will be pushed to GitHub container registry
-repobase="${REPOBASE:-ghcr.io/nethserver}"
+repobase="${REPOBASE:-ghcr.io/geniusdynamics}"
 # Configure the image name
 reponame="rocketchat"
 # Node.js 25+ no longer ships Corepack, install it from npm
@@ -49,7 +49,7 @@ buildah config --entrypoint=/ \
     --label="org.nethserver.authorizations=traefik@node:routeadm" \
     --label="org.nethserver.tcp-ports-demand=1" \
     --label="org.nethserver.rootfull=0" \
-    --label="org.nethserver.images=docker.io/bitnami/mongodb:5.0 registry.rocket.chat/rocketchat/rocket.chat:latest" \
+    --label="org.nethserver.images=docker.io/library/mongo:8.0.38 docker.io/rocketchat/rocket.chat:8.9.1" \
     "${container}"
 # Commit the image
 buildah commit "${container}" "${repobase}/${reponame}"

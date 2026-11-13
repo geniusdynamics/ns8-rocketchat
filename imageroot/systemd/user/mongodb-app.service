@@ -1,0 +1,45 @@
+#
+# Copyright (C) 2026 Genius Dynamics
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+#
+# MongoDB with a single-node replica set, which Rocket.Chat requires.
+# It listens on 127.0.0.1 only, inside the pod.
+#
+[Unit]
+Description=Podman mongodb-app.service
+BindsTo=rocketchat.service
+After=rocketchat.service
+
+[Service]
+Environment=PODMAN_SYSTEMD_UNIT=%n
+EnvironmentFile=%E/state/environment
+Restart=always
+TimeoutStopSec=70
+ExecStartPre=/bin/rm -f %t/mongodb-app.pid %t/mongodb-app.ctr-id
+ExecStart=/usr/bin/podman run --conmon-pidfile %t/mongodb-app.pid \
+    --cidfile %t/mongodb-app.ctr-id --cgroups=no-conmon \
+    --pod-id-file %t/rocketchat.pod-id --replace -d --name mongodb-app \
+    --volume mongodb-data:/data/db:Z \
+    ${MONGO_IMAGE} \
+    mongod --replSet rs0 --bind_ip 127.0.0.1
+# Initiate the replica set once, and wait until this node is the primary
+ExecStartPost=/usr/bin/podman exec mongodb-app mongosh --quiet --eval ' \
+    for (let i = 0; i < 60; i++) { \
+        try { \
+            try { rs.status() } catch (e) { rs.initiate({_id: "rs0", members: [{_id: 0, host: "127.0.0.1:27017"}]}) } \
+            if (db.hello().isWritablePrimary) { quit(0) } \
+        } catch (e) {} \
+        sleep(1000) \
+    } \
+    quit(1)'
+ExecStop=/usr/bin/podman stop --ignore --cidfile %t/mongodb-app.ctr-id -t 10
+ExecStopPost=/usr/bin/podman rm --ignore -f --cidfile %t/mongodb-app.ctr-id
+ExecReload=/usr/bin/podman kill -s HUP mongodb-app
+SyslogIdentifier=%u
+PIDFile=%t/mongodb-app.pid
+Type=forking
+
+[Install]
+WantedBy=default.target
