@@ -1,41 +1,28 @@
 #!/bin/bash
 
 #
-# Copyright (C) 2022 Nethesis S.r.l.
+# Copyright (C) 2026 Genius Dynamics
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 
 set -e -o pipefail
-exec 1>&2 # Redirect any output to the journal (stderr)
+exec 1>&2
 
-# Prepare an initialization script that restores the dump file
-mkdir -vp initdb.d
-mv -v rocketchat.sql initdb.d
-#do the bash file to restore and exit once done
-cat - >initdb.d/zz_rocketchat_restore.sh <<'EOS'
-# Print additional information:
-mysql --version
-# The script is sourced, override entrypoint args and exit:
-set -- true
-docker_temp_server_stop
-exit 0
-EOS
-
-# once we exit we remove initdb.d
-trap 'rm -rfv initdb.d/' EXIT
-
-# we start a container to initiate a database and load the dump
-# at the end of rocketchat_restore.sh the dump is loaded and
-# we exit the container
-podman run \
-  --rm \
-  --interactive \
-  --network=none \
-  --volume=./initdb.d:/docker-entrypoint-initdb.d:z \
-  --volume mysql-data:/var/lib/mysql/:Z \
-  --env MARIADB_ROOT_PASSWORD=Nethesis,1234 \
-  --env MARIADB_DATABASE=rocketchat \
-  --env MARIADB_USER=rocketchat \
-  --env MARIADB_PASSWORD=rocketchat \
-  --replace --name=restore_db \
-  ${MARIADB_IMAGE}
+# Load the MongoDB dump taken by bin/module-dump-state into an empty
+# database, using a throwaway MongoDB, then leave the data in the volume.
+podman volume create mongodb-data >/dev/null 2>&1 || true
+podman run --rm --detach --network=none --name=restore_mongo \
+    --volume mongodb-data:/data/db:Z \
+    "${MONGO_IMAGE}" mongod --replSet rs0 --bind_ip 127.0.0.1
+trap 'podman rm -f restore_mongo >/dev/null 2>&1 || true' EXIT
+for _ in $(seq 1 90); do
+    podman exec restore_mongo mongosh --quiet --eval '
+        try { rs.status() } catch (e) {
+            rs.initiate({_id: "rs0", members: [{_id: 0, host: "127.0.0.1:27017"}]})
+        }
+        quit(db.hello().isWritablePrimary ? 0 : 1)' >/dev/null 2>&1 && break
+    sleep 2
+done
+podman exec --interactive restore_mongo mongorestore --archive --gzip --drop < mongodb.archive.gz
+podman stop restore_mongo
+rm -f mongodb.archive.gz
