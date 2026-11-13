@@ -16,6 +16,7 @@ After=rocketchat.service
 Environment=PODMAN_SYSTEMD_UNIT=%n
 EnvironmentFile=%E/state/environment
 Restart=always
+RestartSec=10
 TimeoutStopSec=70
 TimeoutStartSec=300
 ExecStartPre=/bin/rm -f %t/mongodb-app.pid %t/mongodb-app.ctr-id
